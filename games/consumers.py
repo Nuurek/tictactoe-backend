@@ -1,10 +1,14 @@
+import random
 import uuid
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
+from games.models import Game
+
 
 class GameConsumer(AsyncJsonWebsocketConsumer):
     game_id = None
+    game: Game = None
 
     async def connect(self):
         self.game_id = str(self.scope['url_route']['kwargs']['game_id'])
@@ -14,9 +18,14 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             self.channel_name
         )
 
-        await self.accept()
+        self.fetch_game()
+        if self.can_join():
+            await self.accept()
 
-        await self.send_json({'player_id': str(uuid.uuid4())})
+            player_id = self.accept_player()
+            await self.send_json({'player_id': player_id})
+        else:
+            await self.close()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
@@ -40,3 +49,24 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         content = event['content']
 
         await self.send_json(content)
+
+    def accept_player(self):
+        player_ids = self.game.player_ids
+        mark = random.choice([mark for (mark, player_id) in player_ids.items() if not player_id])
+        player_id = str(uuid.uuid4())
+        self.game.player_ids = {
+            **player_ids,
+            mark: player_id
+        }
+        self.game.save()
+
+        return player_id
+
+    def fetch_game(self):
+        self.game = Game.objects.filter(id=self.game_id).first()
+
+    def can_join(self):
+        player_ids = self.game.player_ids
+        left_slots = len(player_ids) - sum([1 if player_id else 0 for player_id in player_ids.values()])
+
+        return self.game and left_slots > 0
