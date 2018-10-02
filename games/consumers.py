@@ -121,7 +121,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
         if self.game.current_turn == self.mark and not self.game.fields[field]:
             self.game.fields[field] = self.mark
-            self.game.current_turn = Field.X.value if self.mark == Field.O else Field.O.value
+            self.game.current_turn = Field.X.value if self.mark == Field.O.value else Field.O.value
             self.game.save()
             return True
         else:
