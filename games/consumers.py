@@ -6,7 +6,7 @@ from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-from games.models import Game
+from games.models import Game, Field
 from games.serializers import GameSerializer
 
 
@@ -50,7 +50,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             if self.player_id:
                 message_type = MessageType.ACCEPTED
                 content['game']['player_id'] = self.player_id
-                content['game']['player_mark'] = self.game.player_marks[self.player_id]
+                self.mark = self.game.player_marks[self.player_id]
+                content['game']['player_mark'] = self.mark
             else:
                 message_type = MessageType.REJECTED
 
@@ -67,7 +68,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def receive_json(self, content, **kwargs):
-        pass
+        field = content['field']
+        if await self.make_move(field):
+            await self.broadcast_game_state()
 
     async def broadcast(self, message_type, content):
         await self.channel_layer.group_send(
@@ -111,3 +114,15 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
     async def can_join(self):
         return not self.game.is_full()
+
+    @database_sync_to_async
+    def make_move(self, field):
+        self.game.refresh_from_db()
+
+        if self.game.current_turn == self.mark and not self.game.fields[field]:
+            self.game.fields[field] = self.mark
+            self.game.current_turn = Field.X.value if self.mark == Field.O else Field.O.value
+            self.game.save()
+            return True
+        else:
+            return False
