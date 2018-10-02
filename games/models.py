@@ -35,3 +35,7 @@ class Game(models.Model):
     winner = models.CharField(null=True, choices=Field.choices(), max_length=1)
     current_turn = models.CharField(null=True, choices=Field.choices(), max_length=1)
     player_ids = JSONField(default=default_player_ids)
+
+    def is_full(self):
+        left_slots = len(self.player_ids) - sum([1 if player_id else 0 for player_id in self.player_ids.values()])
+        return left_slots == 0
