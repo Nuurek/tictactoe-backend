@@ -39,3 +39,9 @@ class Game(models.Model):
     def is_full(self):
         left_slots = len(self.player_ids) - sum([1 if player_id else 0 for player_id in self.player_ids.values()])
         return left_slots == 0
+
+    @property
+    def player_marks(self):
+        return {
+            player_id: mark for mark, player_id in self.player_ids.items() if player_id
+        }

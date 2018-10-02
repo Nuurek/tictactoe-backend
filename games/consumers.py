@@ -50,6 +50,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             if self.player_id:
                 message_type = MessageType.ACCEPTED
                 content['game']['player_id'] = self.player_id
+                content['game']['player_mark'] = self.game.player_marks[self.player_id]
             else:
                 message_type = MessageType.REJECTED
 
@@ -104,6 +105,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
         if self.game.is_full():
             self.game.first_player = random.choice(list(self.game.player_ids.keys()))
+            self.game.current_turn = self.game.first_player
 
         self.game.save()
 
