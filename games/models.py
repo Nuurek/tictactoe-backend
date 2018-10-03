@@ -36,7 +36,7 @@ class Game(models.Model):
         models.CharField(null=True, choices=Field.choices(), max_length=1), size=BOARD_SIZE, default=empty_fields
     )
     first_player = models.CharField(null=True, choices=Field.choices(), max_length=1)
-    winner = models.CharField(null=True, choices=winner_choices(), max_length=1)
+    winner = models.CharField(null=True, choices=winner_choices(), max_length=4)
     current_turn = models.CharField(null=True, choices=Field.choices(), max_length=1)
     player_ids = JSONField(default=default_player_ids)
 

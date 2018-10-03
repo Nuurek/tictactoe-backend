@@ -121,8 +121,45 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
         if self.game.current_turn == self.mark and not self.game.fields[field]:
             self.game.fields[field] = self.mark
-            self.game.current_turn = Field.X.value if self.mark == Field.O.value else Field.O.value
+
+            fields = self.game.fields
+            rows = [fields[row*3:row*3+3] for row in range(3)]
+            columns = [fields[column::3] for column in range(3)]
+            axis_one = [[fields[0], fields[4], fields[8]]]
+            axis_two = [[fields[2], fields[4], fields[6]]]
+            winning_fields = rows + columns + axis_one + axis_two
+
+            is_x_winning = self.check_winning(Field.X.value, winning_fields)
+            is_o_winning = self.check_winning(Field.O.value, winning_fields)
+            is_draw = all([
+                (
+                    any([field == Field.X.value for field in fields])
+                    and
+                    any([field == Field.O.value for field in fields])
+                ) for fields in winning_fields
+            ])
+
+            if is_x_winning:
+                self.game.winner = Field.X.value
+            elif is_o_winning:
+                self.game.winner = Field.O.value
+            elif is_draw:
+                self.game.winner = 'draw'
+
+            if self.game.winner:
+                self.game.current_turn = None
+            else:
+                self.game.current_turn = Field.X.value if self.mark == Field.O.value else Field.O.value
+
             self.game.save()
             return True
         else:
             return False
+
+    @staticmethod
+    def check_winning(mark, winning_field):
+        return any([
+            all([
+                field == mark for field in fields
+            ]) for fields in winning_field
+        ])
